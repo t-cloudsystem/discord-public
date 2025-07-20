@@ -1,12 +1,15 @@
 import datetime
 import random
 import os
-from logging import getLogger, StreamHandler, DEBUG
+from logging import getLogger, StreamHandler, DEBUG, INFO
 import asyncio
 
 from dotenv import load_dotenv
 from discord.ext import commands, tasks
 import discord
+from discord.utils import setup_logging
+
+from discordbot.hot_reload import HotReload
 
 load_dotenv(verbose=True)
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
@@ -14,6 +17,10 @@ load_dotenv(dotenv_path)
 
 from discordbot.templates import limit_command  # noqa: E402
 
+# Discord.pyのログセットアップ（bot.run()と同じ設定）
+setup_logging(level=INFO)
+
+# メインアプリケーションのログ設定
 logger = getLogger(__name__)
 handler = StreamHandler()
 handler.setLevel(DEBUG)
@@ -174,7 +181,15 @@ async def load_extension(public_bot: csPublicBot):
             await public_bot.bot.load_extension(f"discordbot.cogs.{cog[:-3]}")
 
 
-if __name__ == "__main__":
+async def main():
     public_bot = csPublicBot()
-    asyncio.run(load_extension(public_bot))
-    public_bot.bot.run(os.environ.get("DISCORD_TOKEN_CSPUBLIC"))
+    await load_extension(public_bot)
+    hot_reload = HotReload(public_bot.bot)
+    await asyncio.gather(
+        public_bot.bot.start(os.environ.get("DISCORD_TOKEN_CSPUBLIC")),
+        hot_reload.watch_files()
+    )
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
