@@ -5,10 +5,12 @@ import random
 import time
 
 from discord.ext import commands, tasks
+from discord import app_commands, Interaction
 import requests
 import scapi
 
-from discordbot.scratch_info import ScratchInfo
+from discordbot.cogs.scratch_info import ScratchInfo
+from ..templates import limit_command
 
 
 logger = getLogger(__name__)
@@ -28,7 +30,7 @@ start_times = [
 
 
 class DailyProjects(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot) -> None:
         self.bot: commands.Bot = bot
         self.studio_id = os.environ.get("SCRATCH_DAILY_PROJECTS_STUDIO_ID")
         self.api_url = os.environ.get("SCRATCH_DAILY_HISTORY_API_URL")
@@ -40,6 +42,7 @@ class DailyProjects(commands.Cog):
 
         self.max_applies = 20
 
+        # self.bot.tree.add_command(self.decide_command)
         self.run.start()
 
     def cog_unload(self):
@@ -125,3 +128,21 @@ class DailyProjects(commands.Cog):
             "title": choiced_project.title,
             "pass": self.api_pass
         })
+
+    @app_commands.command(name="admin_decide_daily_project", description="手動で今日の作品を選出します。")
+    @limit_command(only_admin=True, only_cloudserver=True)
+    async def decide_command(self, interaction: Interaction):
+        await interaction.response.defer()
+        await self.decide_daily_project(mention=False)
+        await interaction.followup.send("選出が完了しました", ephemeral=True)
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        pass
+        # await self.bot.tree.sync()
+
+
+async def setup(bot: commands.Bot):
+    """Cogをセットアップする関数"""
+    await bot.add_cog(DailyProjects(bot))
+    logger.info("DailyProjects セットアップ完了")

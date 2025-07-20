@@ -3,9 +3,12 @@ from logging import getLogger, StreamHandler, DEBUG, INFO
 from typing import Literal
 import asyncio
 
-from discord import Embed
+from discord import Embed, app_commands
+import discord
+from discord.ext import commands
 import scapi
 
+from ..templates import EmbedTemplates
 
 logger = getLogger(__name__)
 handler = StreamHandler()
@@ -104,7 +107,7 @@ class ScratchInfo:
         embed.set_author(name=self.author.username, url=f"https://scratch.mit.edu/users/{self.author.username}/", icon_url=self.author.icon_url)
 
         if can_delete:
-            embed.set_footer(text="🗑️リアクションで削除", icon_url=self.bot_icon_url)
+            embed.set_footer(text="🗑️リアクションで削除しない", icon_url=self.bot_icon_url)
 
         return embed
 
@@ -121,6 +124,49 @@ async def get_scratch_info(text: str, bot_icon_url: str = None) -> list[ScratchI
         except ValueError:
             logger.debug("情報取得失敗")
     return data
+
+
+class ScratchInfoCog(commands.Cog):
+    """Scratchの情報を取得するCog"""
+
+    def __init__(self, bot: commands.Bot):
+        self.bot = bot
+        self.bot_icon_url = "https://api.takechi.cloud/src/icon/takechi_v2.1.png"
+        # self.bot.tree.add_command(self.scratch_embed)
+
+    @app_commands.command(name="scratch_fetch", description="Scratchのプロジェクト・ユーザー・スタジオの情報を取得して表示します。")
+    @discord.app_commands.describe(
+        text="ScratchのURLを含むテキスト",
+        ephemeral="非公開で作成するか (Trueで非公開)"
+    )
+    async def scratch_embed(self, interaction: discord.Interaction, text: str, ephemeral: bool = False):
+        await interaction.response.defer(ephemeral=ephemeral)
+
+        app_info = await self.bot.application_info()
+        data = await get_scratch_info(text, app_info.icon.url)
+        if data:
+            await interaction.followup.send(embeds=[scratch_info.get_embed() for scratch_info in data])
+        else:
+            await interaction.followup.send(embed=EmbedTemplates.scratch_no_found)
+
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message):
+        if "<embed_skip>" not in message.content:
+            app_info = await self.bot.application_info()
+            data = await get_scratch_info(message.content, app_info.icon.url)
+            if data:
+                await message.reply(embeds=[scratch_info.get_embed() for scratch_info in data], mention_author=False)
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        pass
+        # await self.bot.tree.sync()
+
+
+async def setup(bot: commands.Bot):
+    """Cogのセットアップ関数"""
+    await bot.add_cog(ScratchInfoCog(bot))
+    logger.info("ScratchInfoCog セットアップ完了")
 
 
 if __name__ == "__main__":

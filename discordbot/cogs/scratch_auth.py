@@ -7,10 +7,11 @@ from dataclasses import dataclass
 
 import discord
 from discord.ext import commands
+from discord import app_commands
 import requests
 
 from discordbot.templates import EmojiTemplates
-# from templates import EmojiTemplates  # テスト用
+from ..templates import limit_command, _command_is_cs_admin
 
 
 logger = getLogger(__name__)
@@ -195,6 +196,22 @@ class ScratchAuth:
         return embed, view, public_code
 
 
+class csAuthStartView(discord.ui.View):
+    def __init__(self, scratch_auth: ScratchAuth, bot: commands.Bot, timeout=None):
+        self.scratch_auth = scratch_auth
+        self.bot = bot
+        super().__init__(timeout=timeout)
+
+    @discord.ui.button(label="はじめる", custom_id="startauth", style=discord.ButtonStyle.primary)
+    async def start(self, interaction: discord.Interaction, button: discord.Button) -> None:
+        if discord.utils.get(interaction.user.roles, name="CSuser") is not None:
+            embed = discord.Embed(title="ユーザー認証", description="あなたはすでに認証が完了しているようです。", color=0x43b581)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        else:
+            await interaction.response.send_message(embed=discord.Embed(title="ユーザー認証", description="認証方法を選択してください！", color=0x4459fe),
+                                                    view=ChooseMethodView(self.scratch_auth, EmojiTemplates(self.bot)), ephemeral=True)
+
+
 class ChooseMethodView(discord.ui.View):
     def __init__(self, scratch_auth: ScratchAuth, emoji_templates: EmojiTemplates, timeout=None):
         self.emoji_templates = emoji_templates
@@ -286,6 +303,40 @@ class WaitingVerifyView(discord.ui.View):
                 color=0xf6a408
             )
             await interaction.followup.send(embed=embed)
+
+
+class ScratchAuthCog(commands.Cog):
+    """Scratch認証を行うCog"""
+
+    def __init__(self, bot: commands.Bot):
+        self.bot = bot
+        self.scratch_auth = ScratchAuth()
+        self.scratch_auth.init_with_bot(bot)
+
+        # self.bot.tree.add_command(self.auth_command)
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        self.auth_view = csAuthStartView(self.scratch_auth, self.bot)
+        self.bot.add_view(self.auth_view)
+        self.bot.tree.add_command(self.auth_command, override=True)
+        # await self.bot.tree.sync()
+
+    @app_commands.command(name="cs_auth", description="ユーザー認証のテンプレートを表示します。")
+    @limit_command(only_cloudserver=True)
+    async def auth_command(self, interaction: discord.Interaction):
+        embed = discord.Embed(title="ユーザー認証", description="下のボタンを押して、☁システムとの連携を始めましょう！", color=0x4459fe)
+        if _command_is_cs_admin(interaction):
+            await interaction.channel.send(embed=embed, view=self.auth_view)
+            await interaction.response.send_message("↓送信が完了しました", ephemeral=True)
+        else:
+            await interaction.response.send_message(embed=embed, view=self.auth_view, ephemeral=True)
+
+
+async def setup(bot: commands.Bot):
+    """Cogのセットアップ関数"""
+    await bot.add_cog(ScratchAuthCog(bot))
+    logger.info("ScratchAuthCog セットアップ完了")
 
 
 if __name__ == "__main__":
