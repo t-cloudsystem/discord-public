@@ -107,7 +107,7 @@ class ScratchInfo:
         embed.set_author(name=self.author.username, url=f"https://scratch.mit.edu/users/{self.author.username}/", icon_url=self.author.icon_url)
 
         if can_delete:
-            embed.set_footer(text="🗑️リアクションで削除しない", icon_url=self.bot_icon_url)
+            embed.set_footer(text="🗑️リアクションで削除", icon_url=self.bot_icon_url)
 
         return embed
 
