@@ -1,3 +1,5 @@
 #!/bin/bash
 
-cd ~/projects/discord-public; python3 -m discordbot
+cd ~/projects/discord-public
+source .venv/bin/activate
+python3 -m discordbot
