@@ -151,6 +151,9 @@ class ScratchInfoCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
+        if message.author == self.bot.user:  # 自分自身
+            return
+
         if "<embed_skip>" not in message.content:
             app_info = await self.bot.application_info()
             data = await get_scratch_info(message.content, app_info.icon.url)
