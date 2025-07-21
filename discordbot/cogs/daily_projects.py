@@ -65,18 +65,22 @@ class DailyProjects(commands.Cog):
         past_projects = set(int(data["id"]) for data in past_res.json()["data"])
         applies = {}
 
-        projects_id = []
+        projects_candidate: list[scapi.Project] = []
         projects_weight = []
 
         # projectsは新しい順に返される
-        for project in studio.projects(limit=studio.project_count):
-            if project.moderation_status == "notsafe":
-                continue
+        async for project in studio.projects(limit=studio.project_count):
+            try:
+                if project.get_remixtree().moderation_status == "notsafe":
+                    continue
+            except scapi.exception.ObjectNotFound:
+                # 一応そのまま流す
+                logger.warning(f"ステータス取得失敗 {project.id}")
 
             if project.author not in applies:
                 applies[project.author] = 0
 
-            # 採用済みと合わせてカウント
+            # すでに掲載済みのものと合わせてカウント
             if applies[project.author] > self.max_applies:
                 continue
 
@@ -85,10 +89,10 @@ class DailyProjects(commands.Cog):
             if project.id in past_projects:
                 continue
 
-            projects_id.append(project)
+            projects_candidate.append(project)
             projects_weight.append(1)
 
-        if not projects_id:
+        if not projects_candidate:
             logger.info("対象作品なし")
             last_sent = max(int(data["timestamp"]) for data in past_res.json()["data"])
             if time.time() - last_sent > 24 * 60 * 60 + 300:
@@ -101,10 +105,10 @@ class DailyProjects(commands.Cog):
             logger.info(f"メッセージ送信完了: {message.id}")
             return
 
-        logger.debug(f"選択肢: {[str(x) for x in projects_id]}")
+        logger.debug(f"選択肢: {[str(x) for x in projects_candidate]}")
         logger.debug(f"重み: {projects_weight}")
 
-        choiced_project = random.choices(projects_id, k=1, weights=projects_weight)[0]
+        choiced_project = random.choices(projects_candidate, k=1, weights=projects_weight)[0]
         logger.info(f"選ばれた作品: {choiced_project.title}")
 
         text = f"## 今日の作品\nhttps://scratch.mit.edu/projects/{choiced_project.id}/"
