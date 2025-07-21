@@ -71,10 +71,11 @@ class DailyProjects(commands.Cog):
         # projectsは新しい順に返される
         async for project in studio.projects(limit=studio.project_count):
             try:
-                if project.get_remixtree().moderation_status == "notsafe":
+                project_remixtree = await project.get_remixtree()
+                if project_remixtree.moderation_status == "notsafe":
                     continue
             except scapi.exception.ObjectNotFound:
-                # 一応そのまま流す
+                # 一応そのまま流す（たぶんエラーの方が多い）
                 logger.warning(f"ステータス取得失敗 {project.id}")
 
             if project.author not in applies:
