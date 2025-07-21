@@ -78,14 +78,15 @@ class DailyProjects(commands.Cog):
                 # 一応そのまま流す（たぶんエラーの方が多い）
                 logger.warning(f"ステータス取得失敗 {project.id}")
 
-            if project.author not in applies:
-                applies[project.author] = 0
+            project_author: str = project.author.username
+            if project_author not in applies:
+                applies[project_author] = 0
 
             # すでに掲載済みのものと合わせてカウント
-            if applies[project.author] > self.max_applies:
+            if applies[project_author] > self.max_applies:
                 continue
 
-            applies[project.author] += 1
+            applies[project_author] += 1
 
             if project.id in past_projects:
                 continue
