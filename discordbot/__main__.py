@@ -109,7 +109,6 @@ class csPublicBot:
         # デコレーターを利用せずにイベントを登録
         self.on_ready = self.bot.event(self.on_ready)
         self.on_message = self.bot.event(self.on_message)
-        self.on_raw_reaction_add = self.bot.event(self.on_raw_reaction_add)
 
         @self.tree.command(name="cs_apply", description="管理者応募のテンプレートを表示します。")
         @limit_command(only_cloudserver=True)
