@@ -26,7 +26,7 @@ class DeleteMessageCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    async def _is_deletable(self, channel: discord.abc.MessageableChannel, message: discord.Message, payload: discord.RawReactionActionEvent) -> bool:
+    async def _is_deletable(self, channel: discord.abc.Messageable, message: discord.Message, payload: discord.RawReactionActionEvent) -> bool:
         """メッセージが削除可能か確認する
 
         Args:
