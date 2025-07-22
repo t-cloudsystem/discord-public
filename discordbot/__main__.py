@@ -121,30 +121,6 @@ class csPublicBot:
             else:
                 await interaction.response.send_message(embed=embed, view=self.apply_view, ephemeral=True)
 
-    async def _delete_info(self, payload: discord.RawReactionActionEvent):
-        """作成した情報の埋め込みを削除
-
-        Args:
-            payload (discord.RawReactionActionEvent): on_raw_reaction_addのペイロード
-        """
-        channel = self.bot.get_channel(payload.channel_id)
-        message = await channel.fetch_message(payload.message_id)
-
-        sent_by_me = self.bot.user.id == message.author.id
-        if sent_by_me and message.embeds[0].footer.text != "🗑️リアクションで削除":
-            logger.debug("削除対象外の埋め込み")
-            return
-
-        try:
-            ref_message = await channel.fetch_message(message.reference.message_id)
-        except discord.errors.NotFound:
-            logger.debug("元メッセージが見つからないため誰でも削除可能")
-            ref_message = None
-
-        if not ref_message or ref_message.author.id == payload.user_id:
-            await message.delete()
-            logger.info(f"埋め込みを削除しました {message.id}")
-
     async def on_ready(self):
         synced_commands = await self.bot.tree.sync()
         logger.debug([f"{command.name}: {command.options}" for command in synced_commands])
@@ -168,11 +144,6 @@ class csPublicBot:
         if message.guild is None:
             await message.reply(content="メッセージありがとうございます！こちらでのお問い合わせにはお答えできませんのでご了承ください。\n[お問い合わせチャンネル](https://discord.com/channels/1210843458932178994/1256881718766469131)のご利用をお願いします。")
             return
-
-    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
-        logger.debug(f"リアクション追加 {payload.emoji.name}")
-        if payload.emoji.name == "🗑️":
-            await self._delete_info(payload)
 
 
 async def load_extension(public_bot: csPublicBot):
